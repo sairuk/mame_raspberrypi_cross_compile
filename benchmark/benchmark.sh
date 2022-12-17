@@ -43,6 +43,10 @@ i386)
   ;;
 esac
 
+MAMEVER=9.999
+MAMEVER=$($MBIN -version | awk '{print $1}')
+echo "MAMEVER set to $MAMEVER"
+
 # Build binary with all path options
 export MBIN="${MAMEDIR}/mame -homepath ${MAMEDIR} -rompath ${MAMEDIR}/roms;${MAMEDIR}/chd -cfg_directory ${MAMEDIR}/cfg -nvram_directory ${MAMEDIR}/nvram ${NODRC}"
 
@@ -91,7 +95,7 @@ do
       sync
       sleep 3
     else
-      echo "Failed to bencmark ${MROM}, check logs"
+      echo "Failed to benchmark ${MROM}, check logs"
     fi
   else
     echo "${MROM}" already has benchmark results in "${TDIR}/log/${MROM}.log"
