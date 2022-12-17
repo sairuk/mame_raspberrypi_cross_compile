@@ -49,8 +49,14 @@ export MBIN="${MAMEDIR}/mame -homepath ${MAMEDIR} -rompath ${MAMEDIR}/roms;${MAM
 # Set the download URL for the NVRAM files
 export MURL="https://raw.githubusercontent.com/danmons/mame_raspberrypi_cross_compile/main/benchmark/files"
 
-# Create MAME dirs if missing
-mkdir -p ${MAMEDIR}/roms ${MAMEDIR}/chd ${MAMEDIR}/cfg ${MAMEDIR}/nvram 2>/dev/null
+# Create MAME dirs if missing, handle user create symlinks as well
+for DIR in "roms chd cfg nvram"
+do
+  if [ ! -l ${MAMEDIR}/${DIR} ]
+  then
+    [ ! -d ${MAMEDIR}/${DIR} ] && mkdir -p ${MAMEDIR}/$DIR > /dev/null
+  fi
+done
 
 # Create output dirs if missing
 mkdir -p "${TDIR}/log" 2>/dev/null
@@ -77,12 +83,16 @@ do
       aria2c --allow-overwrite=true "${MURL}/cfg/${MROM}.cfg"
       cd -
     fi
-    # Force display out to main Xorg window for benchmarking over SSH
     # Flush disk buffers before and after in case we crash, so we can at least save the logs
     sync
-    DISPLAY=:0 ${MBIN} -bench 90 "${MROM}" >>"${TDIR}/log/${MROM}.log" 2>&1
-    sync
-    sleep 3
+    ${MBIN} -bench ${BENCHTIME} "${MROM}" >>"${TDIR}/log/${MROM}.log" 2>&1
+    if [ $? -eq 0 ]
+    then
+      sync
+      sleep 3
+    else
+      echo "Failed to bencmark ${MROM}, check logs"
+    fi
   else
     echo "${MROM}" already has benchmark results in "${TDIR}/log/${MROM}.log"
   fi
