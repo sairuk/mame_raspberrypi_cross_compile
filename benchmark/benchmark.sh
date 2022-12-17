@@ -44,7 +44,7 @@ i386)
 esac
 
 MAMEVER=9.999
-MAMEVER=$($MBIN -version | awk '{print $1}')
+MAMEVER=$(${MAMEDIR}/mame -version | awk '{print $1}')
 echo "MAMEVER set to $MAMEVER"
 
 # Build binary with all path options

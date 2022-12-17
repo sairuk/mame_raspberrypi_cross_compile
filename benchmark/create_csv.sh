@@ -30,7 +30,7 @@ mkdir -p "${TDIR}/results" 2>/dev/null
 
 # Get MAME version
 MAMEVER=9.999
-MAMEVER=$($MBIN -version | awk '{print $1}')
+MAMEVER=$(${MAMEDIR}/mame -version | awk '{print $1}')
 echo "MAMEVER set to $MAMEVER"
 
 # Get model
