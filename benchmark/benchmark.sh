@@ -91,13 +91,15 @@ do
     sync
     RESULT=$( ${MBIN} -bench ${BENCHTIME} "${MROM}" 2>&1 )
     echo "$RESULT" | grep -E "^Average" &>/dev/null
-    if [ $? -eq 0 ]
+    EXITCODE=$?
+    if [ $EXITCODE -eq 0 ]
     then
       echo "$MAMEVER|$RESULT">>"${TDIR}/log/${MROM}.log"
       sync
       sleep 3
     else
-      echo "Failed to benchmark ${MROM}, check logs"
+      echo "Failed to benchmark ${MROM} (exit-code: $EXITCODE)"
+      echo "$RESULT">>"${TDIR}/log/${MROM}_${MAMEVER}_error.log"
     fi
   else
     echo "${MROM}" already has benchmark results for $MAMEVER in "${TDIR}/log/${MROM}.log"
