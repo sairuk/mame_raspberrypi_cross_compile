@@ -50,7 +50,7 @@ export MBIN="${MAMEDIR}/mame -homepath ${MAMEDIR} -rompath ${MAMEDIR}/roms;${MAM
 export MURL="https://raw.githubusercontent.com/danmons/mame_raspberrypi_cross_compile/main/benchmark/files"
 
 # Create MAME dirs if missing, handle user create symlinks as well
-for DIR in "roms chd cfg nvram"
+for DIR in roms chd cfg nvram
 do
   if [ ! -L ${MAMEDIR}/${DIR} ]
   then
