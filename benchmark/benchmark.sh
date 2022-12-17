@@ -70,7 +70,7 @@ mkdir -p "${TDIR}/log" 2>/dev/null
 # To re-benchmark, delete the output log file
 cat "${1}" | while read MROM
 do
-  HASFPS=$(grep -E "^$VERSION.*Average.*" "${TDIR}/log/${MROM}.log" 2>/dev/null)
+  HASFPS=$(grep -E "^${MAMEVER}.*Average.*" "${TDIR}/log/${MROM}.log" 2>/dev/null)
   if [ -z "${HASFPS}" ]
   then
     echo Benchmarking "${MROM}"
@@ -89,9 +89,10 @@ do
     fi
     # Flush disk buffers before and after in case we crash, so we can at least save the logs
     sync
-    ${MBIN} -bench ${BENCHTIME} "${MROM}" >>"${TDIR}/log/${MROM}.log" 2>&1
-    if [ $? -eq 0 ]
+    RESULT=$( ${MBIN} -bench ${BENCHTIME} "${MROM}" 2>&1 )
+    if [ $(echo $RESULT | grep -E "^Average") ]
     then
+      echo "$MAMEVER|$RESULT">>"${TDIR}/log/${MROM}.log"
       sync
       sleep 3
     else
