@@ -52,7 +52,7 @@ export MURL="https://raw.githubusercontent.com/danmons/mame_raspberrypi_cross_co
 # Create MAME dirs if missing, handle user create symlinks as well
 for DIR in "roms chd cfg nvram"
 do
-  if [ ! -l ${MAMEDIR}/${DIR} ]
+  if [ ! -L ${MAMEDIR}/${DIR} ]
   then
     [ ! -d ${MAMEDIR}/${DIR} ] && mkdir -p ${MAMEDIR}/$DIR > /dev/null
   fi
