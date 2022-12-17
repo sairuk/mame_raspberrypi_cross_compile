@@ -56,13 +56,13 @@ done < "${1}"
 echo "Renaming old results.csv if it exists..."
 mv -vf "${TDIR}/results/results.csv" "${TDIR}/results/results_$(date --iso-8601=s).csv" 2>/dev/null
 
-echo 'Version,Arch,Model,ROM,Percentage' > "${TDIR}/results/results.csv"
+echo 'Version,Arch,Model,ROM,Percentage,Time' > "${TDIR}/results/results.csv"
 
 # Build CSV file
 cat "${1}" | while read MROM
 do
   FPS=$( grep ^Average "${TDIR}/log/${MROM}.log" | tail -n1 | awk '{print $3}' | tr -d '%' )
-  echo "${MAMEVER},${ARCH},${MODEL},${MROM},${FPS}" >> "${TDIR}/results/results.csv"
+  echo "${MAMEVER},${ARCH},${MODEL},${MROM},${FPS},${BENCHTIME}" >> "${TDIR}/results/results.csv"
 done
   
 echo "Results output to ${TDIR}/results/results.csv"
