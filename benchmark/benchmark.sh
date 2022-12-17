@@ -70,7 +70,7 @@ mkdir -p "${TDIR}/log" 2>/dev/null
 # To re-benchmark, delete the output log file
 cat "${1}" | while read MROM
 do
-  HASFPS=$(grep ^Average "${TDIR}/log/${MROM}.log" 2>/dev/null)
+  HASFPS=$(grep -E "^$VERSION.*Average.*" "${TDIR}/log/${MROM}.log" 2>/dev/null)
   if [ -z "${HASFPS}" ]
   then
     echo Benchmarking "${MROM}"
