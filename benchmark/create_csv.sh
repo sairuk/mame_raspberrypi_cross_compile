@@ -36,7 +36,7 @@ echo "MAMEVER set to $MAMEVER"
 # Get model
 MFILE=/proc/device-tree/model
 MODEL="Generic"
-[ -f $MFILE ] && MODEL=$(cat /proc/device-tree/model)
+[ -f $MFILE ] && MODEL=$(cat /proc/device-tree/model 2>/dev/null)
 
 # Get arch
 ARCH=$(uname -m)
