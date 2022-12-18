@@ -89,8 +89,8 @@ do
     fi
     # Flush disk buffers before and after in case we crash, so we can at least save the logs
     sync
-    RESULT=$( ${MBIN} -bench ${BENCHTIME} "${MROM}" 2>&1 )
-    echo "$RESULT" | tail -n1 | grep -E "^Average" &>/dev/null
+    RESULT=$( ${MBIN} -bench ${BENCHTIME} "${MROM}" 2>"${TDIR}/log/${MROM}_${MAMEVER}_error.log" )
+    echo "$RESULT" | grep -E "^Average.*" &>/dev/null
     EXITCODE=$?
     if [ $EXITCODE -eq 0 ]
     then
@@ -99,7 +99,8 @@ do
       sleep 3
     else
       echo "Failed to benchmark ${MROM} (exit-code: $EXITCODE)"
-      echo "$RESULT">>"${TDIR}/log/${MROM}_${MAMEVER}_error.log"
+      ERROR_SIZE=$(stat -c %s "${TDIR}/log/${MROM}_${MAMEVER}_error.log")
+      [ $ERROR_SIZE -eq 0 ] && rm "${TDIR}/log/${MROM}_${MAMEVER}_error.log"
     fi
   else
     echo "${MROM}" already has benchmark results for $MAMEVER in "${TDIR}/log/${MROM}.log"
