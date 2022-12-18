@@ -44,7 +44,7 @@ ARCH=$(uname -m)
 # Check all results exist
 while read -r MROM
 do
-  MEXIST=$( grep ^Average "${TDIR}/log/${MROM}.log" 2>/dev/null )
+  MEXIST=$( grep -E "^[0-9].+Average.*" "${TDIR}/log/${MROM}.log" 2>/dev/null )
   if [ -z "${MEXIST}" ]
   then
     echo "Results missing"
@@ -61,7 +61,7 @@ echo 'Version,Arch,Model,ROM,Percentage,Time' > "${TDIR}/results/results.csv"
 # Build CSV file
 cat "${1}" | while read MROM
 do
-  FPS=$( grep ^Average "${TDIR}/log/${MROM}.log" | tail -n1 | awk '{print $3}' | tr -d '%' )
+  FPS=$( grep -E "^[0-9].+Average.*"  "${TDIR}/log/${MROM}.log" | tail -n1 | awk '{print $3}' | tr -d '%' )
   echo "${MAMEVER},${ARCH},${MODEL},${MROM},${FPS},${BENCHTIME}" >> "${TDIR}/results/results.csv"
 done
   
