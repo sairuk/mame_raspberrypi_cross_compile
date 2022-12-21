@@ -1,28 +1,20 @@
 #!/bin/bash
 
+set -x
+
 usage() {
   echo
   echo "${0} /path/to/gameslist.txt"
   echo
 }
 
-if [ -z "${1}" ]
-then
-  usage
-  exit 1
-fi
-
-if [ ! -f "${1}" ]
-then
-  echo
-  echo "${1} not found!"
-  usage
-  exit 1
-fi
+[ -z "${1}" ] && usage && exit 1
+[ ! -f "${1}" ] && echo -e "\n${1} not found!\n" && usage && exit 1
 
 TDIR=$( dirname "${0}" )
 
 # Source config
+[ ! -f ${TDIR}/config.ini ] && cp ${TDIR}/config.ini.dist ${TDIR}/config.ini
 source "${TDIR}/config.ini"
 
 # Enable dynamic recompilation for x86 architectures only
@@ -43,9 +35,11 @@ i386)
   ;;
 esac
 
-MAMEVER=9.999
 MAMEVER=$(${MAMEDIR}/mame -version | awk '{print $1}')
+[ -z "$MAMEVER" ] && echo "Failed to set MAMEVER, exiting"
+
 echo "MAMEVER set to $MAMEVER"
+
 
 # Build binary with all path options
 export MBIN="${MAMEDIR}/mame -homepath ${MAMEDIR} -rompath ${MAMEDIR}/roms;${MAMEDIR}/chd -cfg_directory ${MAMEDIR}/cfg -nvram_directory ${MAMEDIR}/nvram ${NODRC}"
@@ -74,6 +68,11 @@ do
   if [ -z "${HASFPS}" ]
   then
     echo Benchmarking "${MROM}"
+
+    # create log dir structure
+    LOGDIR=${TDIR}/log/${MAMEVER}/${MROM}
+    [ ! -d ${LOGDIR} ] && mkdir -p ${LOGDIR}
+
     unset NEEDSNVRAM
     NEEDSNVRAM=$( grep ^"${MROM}"$ "${TDIR}/lists/nvram.txt" )
     if [ -n "${NEEDSNVRAM}" ]
@@ -89,20 +88,31 @@ do
     fi
     # Flush disk buffers before and after in case we crash, so we can at least save the logs
     sync
-    RESULT=$( ${MBIN} -bench ${BENCHTIME} "${MROM}" 2>"${TDIR}/log/${MROM}_${MAMEVER}_error.log" )
+
+    # run
+    RESULT=$( ${MBIN} -bench ${BENCHTIME} "${MROM}" 2> "${LOGDIR}/error.log" )
+
+    # track progress (if available)
+    echo "$RESULT" | grep -Ev "^Average.*" | sed -r 's/^\[SPEED\]\s// ' >"${LOGDIR}/progress.log"
+    PROG_SIZE=$(stat -c %s "${LOGDIR}/progress.log")
+    [ $PROG_SIZE -eq 0 ] && rm "${LOGDIR}/progress.log"
+
+    # collect average
     echo "$RESULT" | grep -E "^Average.*" &>/dev/null
     EXITCODE=$?
     if [ $EXITCODE -eq 0 ]
     then
-      echo "$MAMEVER|$RESULT">>"${TDIR}/log/${MROM}.log"
+      AVERAGE=$(echo $RESULT | grep -Eo "Average.*")
+      echo "$AVERAGE" >"${LOGDIR}/average.log"
       sync
       sleep 3
     else
+      # handle failed run
       echo "Failed to benchmark ${MROM} (exit-code: $EXITCODE)"
-      ERROR_SIZE=$(stat -c %s "${TDIR}/log/${MROM}_${MAMEVER}_error.log")
-      [ $ERROR_SIZE -eq 0 ] && rm "${TDIR}/log/${MROM}_${MAMEVER}_error.log"
+      ERROR_SIZE=$(stat -c %s "${LOGDIR}/error.log")
+      [ $ERROR_SIZE -eq 0 ] && rm "${LOGDIR}/error.log"
     fi
   else
-    echo "${MROM}" already has benchmark results for $MAMEVER in "${TDIR}/log/${MROM}.log"
+    echo "${MROM}" already has benchmark results for $MAMEVER in "${LOGDIR}/average.log"
   fi
 done

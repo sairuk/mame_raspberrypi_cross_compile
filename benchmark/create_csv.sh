@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 usage() {
   echo
   echo "${0} /path/to/gameslist.txt"
@@ -21,6 +23,7 @@ then
 fi
 
 TDIR=$( dirname "${0}" )
+RESULTS=${TDIR}/results/results.csv
 
 # Source config
 source "${TDIR}/config.ini"
@@ -44,7 +47,8 @@ ARCH=$(uname -m)
 # Check all results exist
 while read -r MROM
 do
-  MEXIST=$( grep -E "^[0-9].+Average.*" "${TDIR}/log/${MROM}.log" 2>/dev/null )
+  LOGDIR=${TDIR}/log/${MAMEVER}/${MROM}
+  MEXIST=$( grep -E "^Average.*" "${LOGDIR}/average.log" 2>/dev/null )
   if [ -z "${MEXIST}" ]
   then
     echo "Results missing"
@@ -54,15 +58,15 @@ do
 done < "${1}"
 
 echo "Renaming old results.csv if it exists..."
-mv -vf "${TDIR}/results/results.csv" "${TDIR}/results/results_$(date --iso-8601=s).csv" 2>/dev/null
+mv -vf "${RESULTS}" "${TDIR}/results/results_$(date --iso-8601=s).csv" 2>/dev/null
 
-echo 'Version,Arch,Model,ROM,Percentage,Time' > "${TDIR}/results/results.csv"
+echo 'Version,Arch,Model,ROM,Percentage,Time' > "${RESULTS}"
 
 # Build CSV file
 cat "${1}" | while read MROM
 do
-  FPS=$( grep -E "^[0-9].+Average.*"  "${TDIR}/log/${MROM}.log" | tail -n1 | awk '{print $3}' | tr -d '%' )
-  echo "${MAMEVER},${ARCH},${MODEL},${MROM},${FPS},${BENCHTIME}" >> "${TDIR}/results/results.csv"
+  FPS=$( grep -E "^Average.*"  "${LOGDIR}/average.log" | tail -n1 | awk '{print $3}' | tr -d '%' )
+  echo "${MAMEVER},${ARCH},${MODEL},${MROM},${FPS},${BENCHTIME}" >> "${RESULTS}"
 done
   
-echo "Results output to ${TDIR}/results/results.csv"
+echo "Results output to ${RESULTS}"
