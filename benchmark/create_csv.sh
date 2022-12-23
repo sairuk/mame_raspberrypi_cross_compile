@@ -1,72 +1,53 @@
 #!/bin/bash
-
-set -x
-
-usage() {
-  echo
-  echo "${0} /path/to/gameslist.txt"
-  echo
-}
-
-if [ -z "${1}" ]
-then
-  usage
-  exit 1
-fi
-
-if [ ! -f "${1}" ]
-then
-  echo
-  echo "${1} not found!"
-  usage
-  exit 1
-fi
-
 TDIR=$( dirname "${0}" )
-RESULTS=${TDIR}/results/results.csv
+source "${TDIR}/func.sh"
+config
 
-# Source config
-source "${TDIR}/config.ini"
+DATA=${1:-""}
+[ -z "${DATA}" ] && usage && exit 1
+[ ! -f "${DATA}" ] && echo -e "\n${DATA} not found!\n" && usage && exit 1
+
+# Gather info
+mamever
+model
+arch
 
 # Create output dirs if missing
-mkdir -p "${TDIR}/results" 2>/dev/null
-
-# Get MAME version
-MAMEVER=9.999
-MAMEVER=$(${MAMEDIR}/mame -version | awk '{print $1}')
-echo "MAMEVER set to $MAMEVER"
-
-# Get model
-MFILE=/proc/device-tree/model
-MODEL="Generic"
-[ -f $MFILE ] && MODEL=$(cat /proc/device-tree/model 2>/dev/null)
-
-# Get arch
-ARCH=$(uname -m)
+mkdir -p "${TDIR}/${RESULTBASE}" 2>/dev/null
 
 # Check all results exist
 while read -r MROM
 do
   LOGDIR=${TDIR}/log/${MAMEVER}/${MROM}
-  MEXIST=$( grep -E "^Average.*" "${LOGDIR}/average.log" 2>/dev/null )
+  MEXIST=$( grep -E "^Average.*" "${LOGDIR}/${AVERAGELOG}" 2>/dev/null )
   if [ -z "${MEXIST}" ]
   then
     echo "Results missing"
-    echo "Please re-run ${TDIR}/benchmark.sh ${1}"
+    echo "Please re-run ${TDIR}/benchmark.sh ${DATA}"
     exit 1
   fi
-done < "${1}"
+done < "${DATA}"
 
-echo "Renaming old results.csv if it exists..."
-mv -vf "${RESULTS}" "${TDIR}/results/results_$(date --iso-8601=s).csv" 2>/dev/null
-
-echo 'Version,Arch,Model,ROM,Percentage,Time' > "${RESULTS}"
+echo "Renaming old results if they exist..."
+mv -vf "${AVGRESULTS}" "${TDIR}/results/results_average_$(date --iso-8601=s).csv" 2>/dev/null
+mv -vf "${PROGRESULTS}" "${TDIR}/results/results_progressive_$(date --iso-8601=s).csv" 2>/dev/null
 
 # Build CSV file
-cat "${1}" | while read MROM
+echo 'Version,Arch,Model,ROM,Percentage,Time' > "${AVGRESULTS}"
+echo 'Version,Arch,Model,ROM,Percentage,Time,%?,%Curr,%Avg,Sec' > "${PROGRESULTS}"
+cat "${DATA}" | while read MROM
 do
-  FPS=$( grep -E "^Average.*"  "${LOGDIR}/average.log" | tail -n1 | awk '{print $3}' | tr -d '%' )
-  echo "${MAMEVER},${ARCH},${MODEL},${MROM},${FPS},${BENCHTIME}" >> "${RESULTS}"
+  LOGDIR=${TDIR}/${LOGBASE}/${MAMEVER}/${MROM}
+
+  # average
+  FPS=$( grep -E "^Average.*"  "${LOGDIR}/${AVERAGELOG}" | tail -n1 | awk '{print $3}' | tr -d '%' )
+  echo "${MAMEVER},${MARCH},${MODEL},${MROM},${FPS},${BENCHTIME}" >> "${AVGRESULTS}"
+
+  # progressive
+  while read -r LINE
+  do
+    echo "${MAMEVER},${MARCH},${MODEL},${LINE}" >> "${PROGRESULTS}"
+  done < ${LOGDIR}/${PROGRESSLOG}
 done
   
-echo "Results output to ${RESULTS}"
+echo "Results output to ${AVGRESULTS} / ${PROGRESULTS}"
