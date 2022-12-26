@@ -1,3 +1,24 @@
-export MAMEDIR=${HOME}/games/mame
+MAMEDIR=${HOME}/games/mame
+MURL="https://raw.githubusercontent.com/danmons/mame_raspberrypi_cross_compile/main/benchmark/files"
+
+LOGBASE=log
+RESULTBASE=results
+ERRORLOG=error.log
+
+BENCHTIME=90
+RUNTIMELOG=runtime.log
+
+AVERAGELOG=average.log
+AVGRESULTS=results_average.csv
+
+PROGRESSLOG=progressive.log
+PROGRESULTS=results_progressive.csv
+
+PROFILEBASE=profile
+PROFILE=${PROFILEBASE}/bench
+PROFILELOG=profile.log
+
+MODE=bench
+RUNS=1
+
 export DISPLAY=:0
-export BENCHTIME=90

@@ -3,28 +3,73 @@ TDIR=$( dirname "${0}" )
 source "${TDIR}/func.sh"
 config
 
-DATA=${1:-""}
-[ -z "${DATA}" ] && usage && exit 1
-[ ! -f "${DATA}" ] && echo -e "\n${DATA} not found!\n" && usage && exit 1
+DATA=""
+FORCE=0
+
+OPTSTRING="hlfi:p:m:"
+while getopts $OPTSTRING ARG
+do
+  case $ARG in
+    h)
+      usage
+      ;;
+    i)
+      DATA="${OPTARG}"
+      ;;
+    p)
+      PROFILE="${OPTARG}"
+      ;;
+    m)
+      MODE="${OPTARG}"
+      ;;
+    l)
+      list_profiles "${PROFILEBASE}"
+      ;;
+    f)
+      FORCE=1
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+
+# check data source is populated
+REQFAIL=0
+[ -z "${DATA}"        ] && echo "Did not pass a gamelist"                     && REQFAIL=1
+[ -z "${PROFILE}"     ] && echo "Profile is not set"                          && REQFAIL=1
+[ $REQFAIL -ne 0      ] && usage && exit $REFAIL
+
+[ ! -f "${PROFILE}"   ] && echo "requested profile does not exist"            && REQFAIL=1
+[ ! -f "${DATA}"      ] && echo "${DATA} not found!"                          && REQFAIL=1
+[ $REQFAIL -ne 0      ] && echo "Requirements failed, see previous messages"  && exit $REFAIL
 
 # Gather info
 mamever
 model
 arch
 
+# Create the MBIN array to store runtime settings
+declare -a MBIN
+
+# source default benchmarking
+source ${PROFILE}
+
+## bench overrides
+# version
+[ -f ${PROFILEBASE}/${MAMEVER} ] && source ${PROFILEBASE}/${MAMEVER}
+
 # Enable dynamic recompilation for x86 architectures only
 # Disable it for everything else, as it's not supported by MAME yet
 case "${MARCH}" in
 x86_64|i686|i386)
-  unset NODRC
+  MBIN+="-drc "
   ;;
 *)
-  export NODRC="-nodrc"
+  MBIN+="-nodrc "
   ;;
 esac
-
-# Build binary with all path options
-export MBIN="${MAMEDIR}/mame -homepath ${MAMEDIR} -rompath ${MAMEDIR}/roms;${MAMEDIR}/chd -cfg_directory ${MAMEDIR}/cfg -nvram_directory ${MAMEDIR}/nvram ${NODRC}"
 
 # Create MAME dirs if missing, handle user create symlinks as well
 for DIR in roms chd cfg nvram
@@ -35,22 +80,29 @@ done
 # Create output dirs if missing
 mkdir -p "${TDIR}/${LOGBASE}" 2>/dev/null
 
+# get basename for profile
+PROFILENAME=$(basename $PROFILE)
+
 # Read the list of ROMs
 # Benchmark only the ones with missing results
-# To re-benchmark, delete the output log file
 cat "${DATA}" | while read MROM
 do
 
   # create log dir structure
   LOGDIR=${TDIR}/log/${MAMEVER}/${MROM}
-  HASFPS=$(grep -E "Average.*" "${LOGDIR}/${AVERAGELOG}" 2>/dev/null)
-  LASTRUNTIME=$(cat "${LOGDIR}/${RUNTIMELOG}" 2>/dev/null || echo "0")
+  HASFPS=$(grep -E "Average.*" "${LOGDIR}/${PROFILENAME}/001/${AVERAGELOG}" 2>/dev/null)
+  LASTRUNTIME=$(cat "${LOGDIR}/${PROFILENAME}/001/${RUNTIMELOG}" 2>/dev/null || echo "0")
   
-  if [ -z "${HASFPS}" ] || [ ${BENCHTIME} -ne ${LASTRUNTIME} ]
+  if [ $FORCE -eq 1 ] || [ -z "${HASFPS}" ] || [ ${BENCHTIME} -ne ${LASTRUNTIME} ]
   then
-    echo Benchmarking "${MROM} for ${BENCHTIME}s"
 
-    [ ! -d ${LOGDIR} ] && mkdir -p ${LOGDIR}
+    # import overrides per rom
+    [ -f ${PROFILEBASE}/${MROM} ] && source ${PROFILEBASE}/${MROM}
+    [ -f ${PROFILEBASE}/${MAMEVER}-${MROM} ] && source ${PROFILEBASE}/${MAMEVER}-${MROM}
+
+    echo Benchmarking "${MROM} for ${BENCHTIME}s (profile: ${PROFILENAME}}"
+
+    [ ! -d "${LOGDIR}/${PROFILENAME}" ] && mkdir -p "${LOGDIR}/${PROFILENAME}"
 
     unset NEEDSNVRAM
     NEEDSNVRAM=$( grep ^"${MROM}"$ "${TDIR}/lists/nvram.txt" )
@@ -70,37 +122,52 @@ do
     sync
 
     # update MBIN
-    MBINU="${MBIN} -bench ${BENCHTIME} ${MROM}"
-    echo "${MBINU}" > "${LOGDIR}/cmdline"
+    MBINU="${MBIN} ${MROM}"
+    echo "${MBINU}" > "${LOGDIR}/${PROFILENAME}/cmdline"
 
-    # run
-    RESULT=$( ${MBINU} 2> "${LOGDIR}/${ERRORLOG}" )
+    RUN=1
+    while [ $RUN -le $RUNS ]
+    do
+      echo "Executing run $RUN/$RUNS"
 
-    # log runtime
-    echo "$BENCHTIME" > "${LOGDIR}/${RUNTIMELOG}"
+      LOGDIRRUN="${LOGDIR}/${PROFILENAME}/$( printf '%03d' $RUN )"
+      [ ! -d "${LOGDIRRUN}" ] && mkdir -p "${LOGDIRRUN}"
 
-    # track progress (if available)
-    echo "$RESULT" | grep -Ev "^Average.*" | sed -r 's/^\[SPEED\]\s// ' >"${LOGDIR}/${PROGRESSLOG}"
-    PROG_SIZE=$(stat -c %s "${LOGDIR}/${PROGRESSLOG}")
-    [ $PROG_SIZE -eq 0 ] && rm "${LOGDIR}/${PROGRESSLOG}"
+      # run
+      RESULT=$( ${MBINU} 2> "${LOGDIRRUN}/${ERRORLOG}" )
 
-    # collect average
-    echo "$RESULT" | grep -E "^Average.*" &>/dev/null
-    EXITCODE=$?
-    if [ $EXITCODE -eq 0 ]
-    then
-      AVERAGE=$(echo $RESULT | grep -Eo "Average.*")
-      echo "$AVERAGE" >"${LOGDIR}/${AVERAGELOG}"
-      sync
-      sleep 3
-    else
-      # handle failed run
-      echo "Failed to benchmark ${MROM} (exit-code: $EXITCODE)"
-      ERROR_SIZE=$(stat -c %s "${LOGDIR}/${ERRORLOG}")
-      [ $ERROR_SIZE -eq 0 ] && rm "${LOGDIR}/${ERRORLOG}"
-    fi
+      # log runtime
+      echo "$BENCHTIME" > "${LOGDIRRUN}/${RUNTIMELOG}"
+
+
+      echo "$PROFILENAME" > "${LOGDIRRUN}/${PROFILELOG}"
+
+      # track progress (if available)
+      echo "$RESULT" | grep -Ev "^Average.*" | sed -r 's/^\[SPEED\]\s// ' >"${LOGDIRRUN}/${PROGRESSLOG}"
+      PROG_SIZE=$(stat -c %s "${LOGDIRRUN}/${PROGRESSLOG}")
+      [ $PROG_SIZE -eq 0 ] && rm "${LOGDIRRUN}/${PROGRESSLOG}"
+
+      # collect average
+      echo "$RESULT" | grep -E "^Average.*" &>/dev/null
+      EXITCODE=$?
+      if [ $EXITCODE -eq 0 ]
+      then
+        AVERAGE=$(echo $RESULT | grep -Eo "Average.*")
+        echo "$AVERAGE" >"${LOGDIRRUN}/${AVERAGELOG}"
+        sync
+        sleep 3
+        RUN=$(( $RUN + 1 ))
+      else
+        # handle failed run
+        echo "Failed to benchmark ${MROM} (exit-code: $EXITCODE)"
+        ERROR_SIZE=$(stat -c %s "${LOGDIRRUN}/${ERRORLOG}")
+        [ $ERROR_SIZE -eq 0 ] && rm "${LOGDIRRUN}/${ERRORLOG}"
+        RUN=$(( $RUNS + 1 ))
+      fi
+
+    done
   else
-    echo "${MROM}" already has benchmark results for $MAMEVER in "${LOGDIR}/${AVERAGELOG}"
+    echo "${MROM}" already has benchmark results for $MAMEVER in "${LOGDIR}/${PROFILENAME}/001/${AVERAGELOG}"
   fi
 
 done

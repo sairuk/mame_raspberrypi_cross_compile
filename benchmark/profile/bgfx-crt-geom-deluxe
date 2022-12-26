@@ -1,0 +1,4 @@
+# run using bgfx chain crt-geom-deluxe
+source ${PROFILEBASE}/seconds-to-run
+source ${PROFILEBASE}/bgfx
+MBIN+="-bgfx_screen_chains crt-geom-deluxe "

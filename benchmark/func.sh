@@ -1,9 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo
-  echo "${0} /path/to/gameslist.txt"
-  echo
+  echo "Usage $0" 
+  echo "-h this help"
+  echo "-i /path/to/gameslist.txt"
+  echo "-p profile (default: bench)"
+  echo "-m mode (inactive)"
+  echo "-l list profiles"
+  exit 0
+
 }
 
 config() {
@@ -30,4 +35,10 @@ model() {
 arch() {
     # Get arch
     export MARCH=$(uname -m)
+}
+
+list_profiles() {
+    echo "Available profiles:"
+    find "${1}" -type f
+    exit 0
 }

@@ -1,0 +1,5 @@
+# default run using -seconds_to_run
+source ${PROFILEBASE}/default_paths
+MBIN+="-nothrottle "
+MBIN+="-seconds_to_run ${BENCHTIME} "
+MBIN+="-snapshot_directory ${MAMEDIR}/snap "

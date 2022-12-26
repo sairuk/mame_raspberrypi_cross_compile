@@ -1,0 +1,6 @@
+# default mame
+MBIN+="${MAMEDIR}/mame "
+MBIN+="-homepath ${MAMEDIR} "
+MBIN+="-rompath ${MAMEDIR}/roms;${MAMEDIR}/chd "
+MBIN+="-cfg_directory ${MAMEDIR}/cfg "
+MBIN+="-nvram_directory ${MAMEDIR}/nvram "

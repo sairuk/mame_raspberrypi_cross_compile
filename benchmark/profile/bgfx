@@ -1,0 +1,5 @@
+# run with bgfx
+MBIN+="-video bgfx "
+MBIN+="-bgfx_path ${MAMEDIR}/bgfx "
+MBIN+="-artpath ${MAMEDIR}/artwork "
+MBIN+="-inipath ${MAMEDIR}/inipath "

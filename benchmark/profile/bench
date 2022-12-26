@@ -1,0 +1,3 @@
+# default run using -bench
+source ${PROFILEBASE}/default_paths
+MBIN+="-bench ${BENCHTIME} "

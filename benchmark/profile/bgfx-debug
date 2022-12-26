@@ -1,0 +1,2 @@
+# run using bgfx_debug
+MBIN+="-bgfx_debug "

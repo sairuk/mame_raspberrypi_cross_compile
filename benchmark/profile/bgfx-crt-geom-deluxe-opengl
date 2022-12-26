@@ -1,0 +1,3 @@
+# run using bgfx chain crt-geom-deluxe opengl
+source ${PROFILEBASE}/bgfx-crt-geom-deluxe
+MBIN+="-bgfx_backend opengl "
