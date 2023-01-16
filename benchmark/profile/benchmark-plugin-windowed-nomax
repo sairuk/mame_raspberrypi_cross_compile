@@ -1,0 +1,5 @@
+# run using benchmark-plugin windowed nomax
+source ${PROFILEBASE}/seconds-to-run
+source ${PROFILEBASE}/nomax
+source ${PROFILEBASE}/windowed
+MBIN+="-plugins -plugin benchmark -skip_gameinfo "

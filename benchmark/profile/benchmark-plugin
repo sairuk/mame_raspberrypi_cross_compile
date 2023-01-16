@@ -1,0 +1,3 @@
+# run using benchmark-plugin
+source ${PROFILEBASE}/seconds-to-run
+MBIN+="-plugins -plugin benchmark -skip_gameinfo "

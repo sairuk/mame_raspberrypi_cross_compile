@@ -1,0 +1,2 @@
+# do not maximise window
+MBIN+="-nomax "
